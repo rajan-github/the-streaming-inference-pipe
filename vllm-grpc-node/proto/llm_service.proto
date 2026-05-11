@@ -1,0 +1,29 @@
+syntax="proto3";
+
+package llm_streaming;
+
+service LLMService{
+    rpc StreamGenerate(stream PromptRequest) returns (stream TokenResponse);
+}
+
+message PromptRequest{
+    string prompt=1;
+    int32 max_tokens=2;
+    float tempreture=3;
+}
+
+message TokenResponse{
+    oneof payload{
+        TokenChunk chunk=1;
+        StopSignal stop=2;
+    }
+}
+
+message TokenChunk{
+    string text=1;
+    bool is_last=2;
+}
+
+message StopSignal{
+    string reason=1;
+}
