@@ -1,5 +1,6 @@
 .venv/
 vllm-grpc-node/src/vllm_server/generated/
+vllm-grpc-node/src/vllm_server/__pycache__/
 vllm-grpc-node/vllm_server/venv/
 vllm-grpc-node/venv/
 vllm-grpc-node/venv
