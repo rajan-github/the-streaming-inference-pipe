@@ -92,3 +92,4 @@ Binary Streaming: The TokenChunk is sent back.
 Java Reception: The Java Gateway receives the binary chunk. Because of our DirectByteBuffer setup, the data is placed directly into off-heap memory.
 
 Final Delivery: The Gateway sends this to the end-user (perhaps via a WebSocket or SSE). Once sent, the buffer is released back to the pool.
+
