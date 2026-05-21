@@ -1,0 +1,103 @@
+openapi: 3.0.4
+info:
+  title: Inference Gateway
+  description: |-
+    This is a simple Inference API.
+  termsOfService: https://swagger.io/terms/
+  contact:
+    email: rajan44chauhan@gmail.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.12
+servers:
+  - url: http://localhost/api/v1
+tags:
+  - name: inference
+    description: API fetches response from LLM engine
+    externalDocs:
+      description: Find out more
+      url: https://github.com/rajan-github/the-streaming-inference-pipe
+paths:
+  /generate:
+    post:
+      tags:
+        - inference
+      summary: Generate the prompt response
+      description: Generate the prompt response as a continuous text stream.
+      operationId: generate
+      requestBody:
+        description: Request body containing the prompt
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful operation - Returns a text stream of tokens
+          content:
+            text/event-stream:
+              schema:
+                type: array
+                items:
+                  type: string
+                description: Raw text chunks or stringified JSON events emitted over time.
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+        '422':
+          description: Validation exception
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetails'
+components:
+  schemas:
+    PromptRequest:
+      required:
+        - prompt
+      type: object
+      properties:
+        prompt:
+          type: string
+        maxTokens:
+          type: integer
+        encoding:
+          type: string
+          enum: [protobuf, json]
+          default: protobuf
+        temperature:
+          type: integer
+          enum: [ 0, 1, 2 ]
+
+    ErrorDetails:
+      required:
+        - reason
+        - status
+        - timestamp
+        - error
+        - path
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Detail about why the error occurred
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code
+          example: 400
+        timestamp:
+          type: integer
+          format: int64
+          description: Epoch millisecond timestamp of the error
+        error:
+          type: string
+          description: Short description of the error type
+        path:
+          type: string
+          description: Request URI path where the error happened

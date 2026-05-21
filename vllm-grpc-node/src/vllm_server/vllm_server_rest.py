@@ -20,7 +20,7 @@ class CompletionRequest(BaseModel):
     max_tokens: Optional[int]=8000
 
 
-@app.post("/v1/completions")
+@app.post("/v1/generate")
 async def stream_completion(request_body: CompletionRequest, request: Request):
     prompt=request_body.prompt
     maxTokens=min(8000, request_body.max_tokens)
