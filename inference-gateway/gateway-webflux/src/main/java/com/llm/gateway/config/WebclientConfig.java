@@ -17,6 +17,6 @@ public class WebclientConfig {
 
     @Bean
     public WebClient createWebClient() {
-        return WebClient.builder().baseUrl(llmServerProperties.getBaseUrl()).build();
+        return WebClient.builder().baseUrl(llmServerProperties.getRestServerBaseUrl()).build();
     }
 }
