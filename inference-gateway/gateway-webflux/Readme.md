@@ -1,8 +1,2 @@
-curl -X POST "http://localhost:8080/api/v1/generate" \
--H "Content-Type: application/json" \
--d '{
-"model": "your-model-name",
-"prompt": "Hello world",
-"temperature": 0.7,
-"encoding": "protobuf"
-}'
+# Sending Request
+curl -X POST "http://<ip-address>:8080/api/v1/generate" -H "Content-Type: application/json" -d '{"prompt": "Hello world", "temperature": 0.7, "encoding": "protobuf"}'
