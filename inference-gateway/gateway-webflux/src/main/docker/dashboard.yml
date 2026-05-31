@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: 'Automated Dashboards'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10 # How often Grafana checks for file updates
+    options:
+      path: /var/lib/grafana/dashboards
