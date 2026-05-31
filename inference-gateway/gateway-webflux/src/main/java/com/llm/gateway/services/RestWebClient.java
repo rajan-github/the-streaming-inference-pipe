@@ -39,7 +39,7 @@ public class RestWebClient {
             requestBytes = objectMapper.writeValueAsBytes(new LlmPromptRequest(prompt, maxTokens));
             long serialDuration = System.nanoTime() - startSerial;
             Timer.builder("inference.pipe.serialization.overhead")
-                    .tag("protocol", "rest-webclient")
+                    .tag("protocol", "REST")
                     .tag("direction", "outbound")
                     .register(meterRegistry)
                     .record(serialDuration, TimeUnit.NANOSECONDS);
@@ -57,7 +57,7 @@ public class RestWebClient {
                     String token = dataBuffer.toString();
                     long duration = System.nanoTime() - startDeserialization;
                     Timer.builder("inference.pipe.serialization.overhead")
-                            .tag("protocol", "rest-webclient")
+                            .tag("protocol", "REST")
                             .tag("direction", "inbound")
                             .register(meterRegistry)
                             .record(duration, TimeUnit.NANOSECONDS);
@@ -68,7 +68,7 @@ public class RestWebClient {
                         long duration = System.nanoTime() - startTime;
                         Timer.builder("inference.pipe.ttft")
                                 .description("Time to first token for llm response")
-                                .tag("protocol", "rest-webclient")
+                                .tag("protocol", "REST")
                                 .register(meterRegistry)
                                 .record(duration, TimeUnit.NANOSECONDS);
                     }

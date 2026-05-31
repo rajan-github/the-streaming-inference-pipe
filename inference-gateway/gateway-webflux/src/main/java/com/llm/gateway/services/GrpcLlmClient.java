@@ -4,25 +4,42 @@ import com.llm.LLMServiceGrpc;
 import com.llm.Llm;
 import io.grpc.*;
 import io.grpc.stub.StreamObserver;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
+
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class GrpcLlmClient {
     private final LLMServiceGrpc.LLMServiceStub llmServiceStub;
+    private final MeterRegistry meterRegistry;
 
-    public GrpcLlmClient(final Channel channel) {
+    public GrpcLlmClient(final Channel channel, MeterRegistry meterRegistry) {
         this.llmServiceStub = LLMServiceGrpc.newStub(channel);
+        this.meterRegistry = meterRegistry;
     }
 
 
     public Flux<String> generateResponse(final String prompt, final int maxTokens, final float temp) {
         log.debug("GrpcLlmClient- Generating Llm.TokenChunk response");
         return Flux.create(sink -> {
+            final AtomicBoolean isFirstToken=new AtomicBoolean(true);
+            final long startTime=System.nanoTime();
             StreamObserver<Llm.TokenResponse> responseObserver = new StreamObserver<Llm.TokenResponse>() {
                 @Override
                 public void onNext(Llm.TokenResponse tokenResponse) {
                     if (tokenResponse.hasChunk()) {
+                        if(isFirstToken.compareAndSet(true, false)){
+                            long duration=System.nanoTime() - startTime;
+                            Timer.builder("inference.pipe.ttft")
+                                    .description("Time to first token for llm response")
+                                    .tag("protocol", "grpc")
+                                    .register(meterRegistry)
+                                    .record(duration, TimeUnit.NANOSECONDS);
+                        }
                         sink.next(tokenResponse.getChunk().getText());
                     } else if (tokenResponse.hasStop()) {
                         log.info("Streaming stopped by remote engine. Reason: {}", tokenResponse.getStop().getReason());
