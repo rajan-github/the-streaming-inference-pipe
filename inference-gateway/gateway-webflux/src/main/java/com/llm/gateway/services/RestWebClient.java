@@ -11,7 +11,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import tools.jackson.databind.ObjectMapper;
 
-import java.awt.image.DataBuffer;
+import org.springframework.core.io.buffer.DataBuffer;
+
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -54,7 +56,7 @@ public class RestWebClient {
                 .bodyToFlux(DataBuffer.class)
                 .map(dataBuffer -> {
                     long startDeserialization = System.nanoTime();
-                    String token = dataBuffer.toString();
+                    String token = dataBuffer.toString(StandardCharsets.UTF_8);
                     long duration = System.nanoTime() - startDeserialization;
                     Timer.builder("inference.pipe.serialization.overhead")
                             .tag("protocol", "REST")
