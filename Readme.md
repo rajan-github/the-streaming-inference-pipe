@@ -1,75 +1,33 @@
-# Problem
+## Problem Statement: Bidirectional Streaming Interface
 
-A bidirectional streaming interface:
-Java Gateway ⇄ Python vLLM Server
-Using:
-gRPC
+### Objective
 
+Design and implement a high-performance, bidirectional streaming interface between a **Java Gateway** and a **Python vLLM Server** utilizing **gRPC** and **Protocol Buffers**.
 
-Protocol Buffers
+### Requirements
 
+#### 1. Schema Definition
 
-vLLM
+Define a robust Protobuf schema that includes the following message structures:
 
+* `PromptRequest`
+* `TokenChunk`
+* `StopSignal`
 
-Requirements
-Define Protobuf schema:
+#### 2. Core Implementation
 
+* **Bidirectional Streaming RPC:** Establish a stable, two-way streaming channel between the Java Gateway and the Python vLLM Server.
+* **Cancellation Propagation:** Ensure that if a client or the gateway cancels a request, the cancellation signal immediately propagates to the Python vLLM server to halt token generation.
+* **Backpressure Handling:** Implement flow control to manage data rates between the producer and consumer, preventing memory exhaustion on either side.
 
-PromptRequest
+#### 3. Optimization & Alternatives
 
-
-TokenChunk
-
-
-StopSignal
-
-
-Implement:
-
-
-Bidi-streaming RPC
-
-
-Cancellation propagation
-
-
-Backpressure handling
-
-
-Add REST baseline endpoint for comparison
-
-
-Implement DirectByteBuffer pooling
+* **DirectByteBuffer Pooling:** Implement pooling of `DirectByteBuffer` instances on the Java side to reduce memory allocation overhead and optimize off-heap memory usage.
+* **REST Baseline:** Implement a baseline REST endpoint to serve as a standard comparison architecture against the gRPC implementation.
 
 
 
-How to Test
-Load test:
-5k concurrent streaming requests
-
-
-Context window = 8k tokens
-
-
-Measure:
-Time to First Token (TTFT)
-
-
-Serialization overhead
-
-
-CPU usage
-
-
-GC pressure
-
-
-Compare:
- REST (JSON) vs gRPC (Protobuf)
-
-
-# Request Flow
+## Request Flow
 A. The Java Gateway (Client)
 Request Arrival: A user sends a prompt. The Gateway "rents" a DirectByteBuffer from the Netty Pool.
 
