@@ -127,7 +127,13 @@ cd the-streaming-inference-pipe
 mvn protobuf:compile protobuf:compile-custom
 
 # Python Stub Generation
-python -m grpc_tools.codegen -I./proto --python_out=./server --grpc_python_out=./server ./proto/inference.proto
+mkdir -p src/vllm_server/generated/python
+
+python -m grpc_tools.protoc \
+  -I proto \
+  --python_out=src/vllm_server/generated/python \
+  --grpc_python_out=src/vllm_server/generated/python \
+  proto/llm_service.proto
 
 ```
 
@@ -144,8 +150,9 @@ pip install -r requirements.txt
 
 * **Start the Python vLLM Server:**
 ```bash
-python server/main.py --model <model-path-or-repo> --port 50051
+python src/vllm_server/vllm_server.py
 
+python src/vllm_server/vllm_server_rest.py (REST)
 ```
 
 
