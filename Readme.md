@@ -27,27 +27,143 @@ Define a robust Protobuf schema that includes the following message structures:
 
 
 
-## Request Flow
-A. The Java Gateway (Client)
-Request Arrival: A user sends a prompt. The Gateway "rents" a DirectByteBuffer from the Netty Pool.
 
-Serialization: The PromptRequest (Protobuf) is serialized. Because we use gRPC, this isn't converted to a string (like JSON); it stays in a binary format that fits perfectly into our pooled buffer.
 
-The Pipe: It’s sent over a HTTP/2 connection (the backbone of gRPC).
+Here is a toned-down, more realistic version of the `README.md`. It reflects a standard, working implementation using default configurations while moving advanced production optimizations (like custom OOM safeguards and fine-tuned Netty configurations) to a "Future Roadmap" section.
 
-B. The Python vLLM Server (Server)
-Async Reception: The gRPC server (running grpc.aio) receives the binary blob. It doesn't "block" a thread; it handles it like a notification.
+---
 
-The Yielding Loop: The server calls engine.generate(prompt). This returns an Asynchronous Generator (a stream).
+# The Streaming Inference Pipe
 
-Token Generation: Every time the GPU produces a token (e.g., "The"), the AsyncLLMEngine yields it.
+A bidirectional streaming interface linking a **Java Gateway** (Spring WebFlux / Netty) to a **Python vLLM Server** using **gRPC** and **Protocol Buffers**.
 
-Backpressure Check: Before sending the token back to Java, the Python server checks: "Is the Java pipe full?" If Java is struggling to keep up, Python will actually pause the generator to avoid memory overflow.
+This project establishes an asynchronous pipeline optimized for passing prompts and streaming back generated LLM token chunks over a persistent network boundary.
 
-C. The Return Trip
-Binary Streaming: The TokenChunk is sent back.
+```
++--------------+                   +--------------------+
+|              | --(Streaming)-->  |                    |
+| Java Gateway |                   | Python vLLM Server |
+|  (WebFlux)   | <-- (Tokens) ---- |    (Async vLLM)    |
++--------------+                   +--------------------+
 
-Java Reception: The Java Gateway receives the binary chunk. Because of our DirectByteBuffer setup, the data is placed directly into off-heap memory.
+```
 
-Final Delivery: The Gateway sends this to the end-user (perhaps via a WebSocket or SSE). Once sent, the buffer is released back to the pool.
+## Features
 
+* **Bidirectional Streaming RPC:** Utilizes gRPC over HTTP/2 to allow concurrent prompt submission and asynchronous token chunk responses.
+* **Basic Cancellation Propagation:** Leverages gRPC's context cancellation; dropping or interrupting a stream on the Java side triggers a cleanup path to signal the Python vLLM server to halt token generation.
+* **DirectByteBuffer Pooling:** Integrates standard `DirectByteBuffer` reuse patterns on the Java side to reduce object allocation overhead during chunk handling.
+* **REST Baseline Endpoint:** Includes a basic REST/JSON controller alongside the gRPC configuration to serve as a comparative baseline.
+
+---
+
+## Architecture Blueprint
+
+### 1. Protobuf Schema
+
+The interface between the runtimes is governed by the Protocol Buffers definition (`/proto/inference.proto`):
+
+```protobuf
+syntax = "proto3";
+
+package inference;
+
+option java_multiple_files = true;
+option java_package = "com.pipeline.inference";
+
+message PromptRequest {
+  string request_id = 1;
+  string prompt = 2;
+  float temperature = 3;
+  int32 max_tokens = 4;
+}
+
+message TokenChunk {
+  string text = 1;
+  int32 token_id = 2;
+  bool is_special = 3;
+}
+
+message StopSignal {
+  enum Reason {
+    FINISH = 0;
+    LENGTH = 1;
+    CANCELLED = 2;
+  }
+  Reason reason = 1;
+  int32 total_tokens_generated = 2;
+}
+
+```
+
+### 2. Implementation State
+
+* **Java Gateway:** Built on **Spring WebFlux** and **Netty** using standard out-of-the-box configurations to manage the incoming client endpoints and map them to gRPC `StreamObserver` stubs.
+* **Python Backend:** Uses `grpc.aio` alongside vLLM's `AsyncLLMEngine` to listen for requests and yield generated text blocks back to the Java client.
+
+---
+
+## Setup & Execution
+
+### Prerequisites
+
+* Java 17+
+* Python 3.10+
+* Protobuf Compiler (`protoc`)
+
+### Installation
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/rajan-github/the-streaming-inference-pipe.git
+cd the-streaming-inference-pipe
+
+```
+
+
+2. **Generate Protobuf Stubs:**
+```bash
+# Java Stub Generation
+mvn protobuf:compile protobuf:compile-custom
+
+# Python Stub Generation
+python -m grpc_tools.codegen -I./proto --python_out=./server --grpc_python_out=./server ./proto/inference.proto
+
+```
+
+
+3. **Install Python Dependencies:**
+```bash
+pip install -r requirements.txt
+
+```
+
+
+
+### Running the Services
+
+* **Start the Python vLLM Server:**
+```bash
+python server/main.py --model <model-path-or-repo> --port 50051
+
+```
+
+
+* **Start the Java Gateway:**
+```bash
+mvn clean package
+java -jar target/java-gateway.jar
+
+```
+
+
+
+---
+
+## Future Roadmap (Yet to Implement)
+
+The project currently utilizes default WebFlux and Netty network settings. To make this pipeline enterprise-ready, the following architectural additions are planned:
+
+* [ ] **Advanced Backpressure & OOM Protection:** Implement strict application-level reactive streams flow control to protect the JVM heap from being overwhelmed by high-throughput token streams.
+* [ ] **Custom Netty Tuning:** Configure dedicated event loop groups, custom buffer watermarks, and keep-alive parameters rather than relying on WebFlux defaults.
+* [ ] **Robust Exception Propagation:** Enhance the gRPC interceptor layer to map internal vLLM failures to standard HTTP/gRPC status codes cleanly.
